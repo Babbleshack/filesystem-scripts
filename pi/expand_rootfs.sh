@@ -9,31 +9,13 @@
  # See: #https://github.com/RPi-Distro/raspi-config
 
 do_expand_rootfs() {
-  if ! [ -h /dev/root ]; then
-    whiptail --msgbox "/dev/root does not exist or is not a symlink. Don't know how to expand" 20 60 2
-    return 0
-  fi
 
   ROOT_PART=$(readlink /dev/root)
   PART_NUM=${ROOT_PART#mmcblk0p}
-  if [ "$PART_NUM" = "$ROOT_PART" ]; then
-    whiptail --msgbox "/dev/root is not an SD card. Don't know how to expand" 20 60 2
-    return 0
-  fi
 
-  # NOTE: the NOOBS partition layout confuses parted. For now, let's only 
-  # agree to work with a sufficiently simple partition layout
-  if [ "$PART_NUM" -ne 2 ]; then
-    whiptail --msgbox "Your partition layout is not currently supported by this tool. You are probably using NOOBS, in which case your root filesystem is already expanded anyway." 20 60 2
-    return 0
-  fi
 
   LAST_PART_NUM=$(parted /dev/mmcblk0 -ms unit s p | tail -n 1 | cut -f 1 -d:)
 
-  if [ "$LAST_PART_NUM" != "$PART_NUM" ]; then
-    whiptail --msgbox "/dev/root is not the last partition. Don't know how to expand" 21 60 2
-    return 0
-  fi
 
   # Get the starting offset of the root partition
   PART_START=$(parted /dev/mmcblk0 -ms unit s p | grep "^${PART_NUM}" | cut -f 2 -d:)
@@ -84,9 +66,10 @@ esac
 EOF
   chmod +x /etc/init.d/resize2fs_once &&
   update-rc.d resize2fs_once defaults &&
-  if [ "$INTERACTIVE" = True ]; then
-    whiptail --msgbox "Root partition has been resized.\nThe filesystem will be enlarged upon the next reboot" 20 60 2
-  fi
+}
+
+update_cmdtxt() {
+  sed -i "s/init=\/usr/bin\/filesystem_scripts\/expand_readwritefs.sh//" "/boot/cmdline.txt"
 }
 
 #Check for root
@@ -97,6 +80,7 @@ fi
 #Do expand
 echo "Expanding root filesystem"
 do_expand_rootfs
+update_cmdtxt
 echo "REBOOTING NOW..."
 sleep 3
 reboot

@@ -90,9 +90,10 @@ esac
 EOF
   chmod +x /etc/init.d/resize2fs_once &&
   update-rc.d resize2fs_once defaults &&
-  if [ "$INTERACTIVE" = True ]; then
-    whiptail --msgbox "/readwrite partition has been resized.\nThe filesystem will be enlarged upon the next reboot" 20 60 2
-  fi
+}
+
+update_cmdtxt() {
+  sed -i "s/init=\/usr/bin\/filesystem_scripts\/expand_readwritefs.sh//" "/boot/cmdline.txt"
 }
 
 #Check for root
@@ -103,6 +104,7 @@ fi
 #Do expand
 echo "Expanding root filesystem"
 do_expand_rootfs
+update_cmdtxt
 echo "REBOOTING NOW..."
 sleep 3
 reboot
