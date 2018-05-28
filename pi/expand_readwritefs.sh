@@ -55,7 +55,7 @@ EOF
 }
 
 update_cmdtxt() {
-  sed -i "s/init=\/usr/bin\/filesystem_scripts\/expand_readwritefs.sh//" "/boot/cmdline.txt"
+  sed -i "s#init=/usr/bin/filesystem_scripts/expand_readwritefs.sh##" "/boot/cmdline.txt"
 }
 
 #Check for root
