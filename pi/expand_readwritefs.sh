@@ -89,7 +89,7 @@ case "$1" in
 esac
 EOF
   chmod +x /etc/init.d/resize2fs_once &&
-  update-rc.d resize2fs_once defaults &&
+  update-rc.d resize2fs_once defaults 
 }
 
 update_cmdtxt() {
