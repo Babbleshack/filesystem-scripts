@@ -9,56 +9,18 @@
  # This script will expand /readwrite to the size of the disk. 
  # See: #https://github.com/RPi-Distro/raspi-config
 do_expand_readwritefs() {
-  #Note sure where this symlink is supposed to come from.
-  #if ! [ -h /dev/readwrite ]; then
-  #  whiptail --msgbox "/dev/readwrite does not exist or is not a symlink. Don't know how to expand" 20 60 2
-  #  return 0
-  #fi
-
-  #RW_PART=$(readlink /dev/readwrite)
-  #PART_NUM=${RW_PART#mmcblk0p}
-  #if [ "$PART_NUM" = "$RW_PART" ]; then
-  #  whiptail --msgbox "/dev/readwrite is not an SD card. Don't know how to expand" 20 60 2
-  #  return 0
-  #fi
-
-  # NOTE: the NOOBS partition layout confuses parted. For now, let's only 
-  # agree to work with a sufficiently simple partition layout
-
-  #if [ "$PART_NUM" -ne 3 ]; then
-  #  whiptail --msgbox "Your partition layout is not currently supported by this tool. You are probably using NOOBS, in which case your root filesystem is already expanded anyway." 20 60 2
-  #  return 0
-  #fi
   PART_NUM=3
   LAST_PART_NUM=$(parted /dev/mmcblk0 -ms unit s p | tail -n 1 | cut -f 1 -d:)
 
-  #if [ "$LAST_PART_NUM" != "$PART_NUM" ]; then
-  #  whiptail --msgbox "/dev/readwrite is not the last partition. Don't know how to expand" 20 60 2
-  #  return 0
-  #fi
-
-  # Get the starting offset of the readwrite partition
-  PART_START=$(parted /dev/mmcblk0 -ms unit s p | grep "^${PART_NUM}" | cut -f 2 -d:)
+  PART_START=$(parted /dev/mmcblk0 -ms unit MB p | grep "^${PART_NUM}" | cut -f 2 -d:)
   [ "$PART_START" ] || return 1
-  # Return value will likely be error for fdisk as it fails to reload the
+  # RBeturn value will likely be error for fdisk as it fails to reload the
   # partition table because the root fs is mounted
-  echo $PART_START
-  echo ${PART_START//s}
-  fdisk /dev/mmcblk0 <<EOF
-p
-d
-$PART_NUM
-F
-n
-p
-3
-${PART_START//s}
 
-p
-w
-EOF
-  ASK_TO_REBOOT=1
-
+  #delete partition
+  parted -s rm $PART_NUM
+  #create new partition
+  parted -s -a optimal /dev/mmcblk0 mkpart primary ext4 $PART_START 100%
   # now set up an init.d script
 cat <<\EOF > /etc/init.d/resize2fs_once &&
 #!/bin/sh
