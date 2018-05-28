@@ -65,7 +65,7 @@ if [[ $EUID > 0 ]]; then
 fi
 #Do expand
 echo "Expanding root filesystem"
-do_expand_rootfs
+do_expand_readwritefs
 update_cmdtxt
 echo "REBOOTING NOW..."
 sleep 3
