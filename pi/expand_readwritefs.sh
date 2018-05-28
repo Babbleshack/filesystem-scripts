@@ -12,10 +12,29 @@ do_expand_readwritefs() {
   PART_NUM=3
   LAST_PART_NUM=$(parted /dev/mmcblk0 -ms unit s p | tail -n 1 | cut -f 1 -d:)
 
-  PART_START=$(parted /dev/mmcblk0 -ms unit MB p | grep "^${PART_NUM}" | cut -f 2 -d:)
+  PART_START=$(parted /dev/mmcblk0 -ms unit s p | grep "^${PART_NUM}" | cut -f 2 -d:)
   [ "$PART_START" ] || return 1
   # RBeturn value will likely be error for fdisk as it fails to reload the
   # partition table because the root fs is mounted
+  echo $PART_START
+  #Awkward!!!
+  TRIMMED_START=$(echo $PART_START | sed 's/[a-zA-Z]*//g')
+  fdisk /dev/mmcblk0 <<EOF
+p
+d
+$PART_NUM
+p
+
+n
+p
+3
+${TRIMMED_START}
+
+
+p
+
+w
+EOF
 
   #delete partition
   parted -s rm $PART_NUM
@@ -39,7 +58,7 @@ cat <<\EOF > /etc/init.d/resize2fs_once &&
 case "$1" in
   start)
     log_daemon_msg "Starting resize2fs_once" &&
-    resize2fs /dev/readwrite &&
+    resize2fs /dev/mmcblk0p3 &&
     rm /etc/init.d/resize2fs_once &&
     update-rc.d resize2fs_once remove &&
     log_end_msg $?
@@ -58,15 +77,8 @@ update_cmdtxt() {
   sed -i "s#init=/usr/bin/filesystem_scripts/expand_readwritefs.sh##" "/boot/cmdline.txt"
 }
 
-#Check for root
-if [[ $EUID > 0 ]]; then
-  echo "Please run as root user"
-  exit 1
-fi
 #Do expand
 echo "Expanding root filesystem"
 do_expand_readwritefs
 update_cmdtxt
 echo "REBOOTING NOW..."
-sleep 3
-reboot
